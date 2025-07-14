@@ -23,11 +23,11 @@ export const exportCanvasToPDF = async (
   });
 
   for (const comp of components) {
-    const x = comp.x || 0;
+    const x = Number(comp.x) || 0;
     // pdf-lib: origem no canto inferior esquerdo
-    const y = A4_HEIGHT - (comp.y || 0) - (comp.height || 32);
-    const w = comp.width || 120;
-    const h = comp.height || 32;
+    const y = A4_HEIGHT - (Number(comp.y) || 0) - (Number(comp.height) || 32);
+    const w = Number(comp.width) || 120;
+    const h = Number(comp.height) || 32;
     switch (comp.type) {
       case "textbox":
       case "textarea":

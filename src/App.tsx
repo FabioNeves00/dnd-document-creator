@@ -38,7 +38,13 @@ const App = () => {
 
   // Exportar PDF usando factory
   const handleExportPDF = async () => {
-    await exportCanvasToPDF(canvasComponents);
+    try {
+      await exportCanvasToPDF(canvasComponents);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error("Erro ao exportar PDF:", err);
+      alert("Erro ao exportar PDF. Veja o console para detalhes.");
+    }
   };
 
   return (
