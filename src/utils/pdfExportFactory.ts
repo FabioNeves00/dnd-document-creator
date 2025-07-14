@@ -71,7 +71,10 @@ function drawTextComponent(
     y,
     width: w,
     height: h,
-    color: rgbHex(comp.backgroundColor || "#181c23"),
+    color:
+      comp.backgroundColor && comp.backgroundColor !== "transparent"
+        ? rgbHex(comp.backgroundColor)
+        : rgb(1, 1, 1),
     borderColor: rgb(0.176, 0.212, 0.274), // #2d3646
     borderWidth: 1,
   });
@@ -80,7 +83,7 @@ function drawTextComponent(
     y: y + h / 2 - 7,
     size: 14,
     font,
-    color: rgbHex(comp.textColor || "#ffffff"),
+    color: rgbHex(comp.textColor || "#000000"),
     maxWidth: w - 16,
   });
 }
@@ -99,7 +102,10 @@ function drawButtonComponent(
     y,
     width: w,
     height: h,
-    color: rgbHex(comp.backgroundColor || "#2563eb"),
+    color:
+      comp.backgroundColor && comp.backgroundColor !== "transparent"
+        ? rgbHex(comp.backgroundColor)
+        : rgb(1, 1, 1),
     borderColor: rgb(0.176, 0.212, 0.274),
     borderWidth: 1,
   });
@@ -108,7 +114,7 @@ function drawButtonComponent(
     y: y + h / 2 - 7,
     size: 14,
     font,
-    color: rgbHex(comp.textColor || "#ffffff"),
+    color: rgbHex(comp.textColor || "#000000"),
     maxWidth: w - 16,
   });
 }
@@ -198,7 +204,10 @@ function drawDefaultComponent(
     y,
     width: w,
     height: h,
-    color: rgbHex(comp.backgroundColor || "#181c23"),
+    color:
+      comp.backgroundColor && comp.backgroundColor !== "transparent"
+        ? rgbHex(comp.backgroundColor)
+        : rgb(1, 1, 1),
     borderColor: rgb(1, 1, 1),
     borderWidth: 1,
   });

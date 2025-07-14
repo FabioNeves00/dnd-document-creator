@@ -115,17 +115,6 @@ export function useCanvasComponents() {
     setCanvasComponents((prev) =>
       prev.map((c) => {
         if (c.id !== selectedId) return c;
-        if (prop === "options") {
-          return {
-            ...c,
-            options: value
-              ? value
-                  .split(",")
-                  .map((opt) => opt.trim())
-                  .filter(Boolean)
-              : [],
-          };
-        }
         if (prop === "width" || prop === "height") {
           const num = value
             ? Math.max(20, Math.min(1000, parseInt(value)))
