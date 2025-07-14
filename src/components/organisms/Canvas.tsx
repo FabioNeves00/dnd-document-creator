@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useCallback } from "react";
 import type { Component as CanvasComponentType } from "../../types";
 import CanvasComponent from "./CanvasComponent";
 
@@ -23,6 +23,24 @@ const Canvas: React.FC<CanvasProps> = ({
   onPropChange,
 }) => {
   const sorted = [...components].sort((a, b) => a.zIndex - b.zIndex);
+
+  // Handlers otimizados
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      onDrop(e);
+    },
+    [onDrop]
+  );
+
+  const handleDragOver = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      onDragOver(e);
+    },
+    [onDragOver]
+  );
+
   return (
     <div
       className="flex items-center justify-center w-full h-full bg-[#181c23]"
@@ -31,8 +49,8 @@ const Canvas: React.FC<CanvasProps> = ({
       <main
         className="relative shadow-2xl border border-gray-400 bg-white"
         data-cy="canvas"
-        onDrop={onDrop}
-        onDragOver={onDragOver}
+        onDrop={handleDrop}
+        onDragOver={handleDragOver}
         style={{
           width: `${A4_WIDTH}px`,
           height: `${A4_HEIGHT}px`,
@@ -57,9 +75,8 @@ const Canvas: React.FC<CanvasProps> = ({
                 position: "absolute",
                 left,
                 top,
-                zIndex: comp.zIndex,
-                width: comp.width ? comp.width + "px" : undefined,
-                height: comp.height ? comp.height + "px" : undefined,
+                width: comp.width || 120,
+                height: comp.height || 32,
               }}
             >
               <CanvasComponent

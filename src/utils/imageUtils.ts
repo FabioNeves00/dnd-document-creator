@@ -1,4 +1,7 @@
 export const getImageDataUrl = (url: string): Promise<string> => {
+  if (url.startsWith("data:image/")) {
+    return Promise.resolve(url);
+  }
   return new Promise((resolve, reject) => {
     const img = new window.Image();
     img.crossOrigin = "anonymous";

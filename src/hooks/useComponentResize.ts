@@ -1,7 +1,7 @@
-import { useRef } from "react";
+import { useRef, useState, useCallback } from "react";
 
 export function useComponentResize(onResize: (w: number, h: number) => void) {
-  const resizing = useRef<null | {
+  const [resizing, setResizing] = useState<null | {
     startX: number;
     startY: number;
     startWidth: number;
@@ -9,45 +9,47 @@ export function useComponentResize(onResize: (w: number, h: number) => void) {
     direction: string;
   }>(null);
 
-  function handleResizeMouseDown(
-    dir: string,
-    startWidth: number,
-    startHeight: number
-  ) {
-    return (e: React.MouseEvent) => {
-      e.stopPropagation();
-      resizing.current = {
-        startX: e.clientX,
-        startY: e.clientY,
-        startWidth,
-        startHeight,
-        direction: dir,
-      };
-      window.addEventListener("mousemove", handleResizeMouseMove);
-      window.addEventListener("mouseup", handleResizeMouseUp);
-    };
-  }
+  const handleResizeMouseDown = useCallback(
+    (dir: string, startWidth: number, startHeight: number) =>
+      (e: React.MouseEvent) => {
+        e.stopPropagation();
+        setResizing({
+          startX: e.clientX,
+          startY: e.clientY,
+          startWidth,
+          startHeight,
+          direction: dir,
+        });
+      },
+    []
+  );
 
-  function handleResizeMouseMove(e: MouseEvent) {
-    if (!resizing.current) return;
-    const dx = e.clientX - resizing.current.startX;
-    const dy = e.clientY - resizing.current.startY;
-    let newWidth = resizing.current.startWidth;
-    let newHeight = resizing.current.startHeight;
-    if (resizing.current.direction.includes("right")) newWidth += dx;
-    if (resizing.current.direction.includes("left")) newWidth -= dx;
-    if (resizing.current.direction.includes("bottom")) newHeight += dy;
-    if (resizing.current.direction.includes("top")) newHeight -= dy;
-    newWidth = Math.max(20, newWidth);
-    newHeight = Math.max(20, newHeight);
-    onResize(Math.round(newWidth), Math.round(newHeight));
-  }
+  const handleResizeMouseMove = useCallback(
+    (e: React.MouseEvent) => {
+      if (!resizing) return;
+      const dx = e.clientX - resizing.startX;
+      const dy = e.clientY - resizing.startY;
+      let newWidth = resizing.startWidth;
+      let newHeight = resizing.startHeight;
+      if (resizing.direction.includes("right")) newWidth += dx;
+      if (resizing.direction.includes("left")) newWidth -= dx;
+      if (resizing.direction.includes("bottom")) newHeight += dy;
+      if (resizing.direction.includes("top")) newHeight -= dy;
+      newWidth = Math.max(20, newWidth);
+      newHeight = Math.max(20, newHeight);
+      onResize(Math.round(newWidth), Math.round(newHeight));
+    },
+    [resizing, onResize]
+  );
 
-  function handleResizeMouseUp() {
-    resizing.current = null;
-    window.removeEventListener("mousemove", handleResizeMouseMove);
-    window.removeEventListener("mouseup", handleResizeMouseUp);
-  }
+  const handleResizeMouseUp = useCallback(() => {
+    setResizing(null);
+  }, []);
 
-  return { handleResizeMouseDown };
+  return {
+    resizing,
+    handleResizeMouseDown,
+    handleResizeMouseMove,
+    handleResizeMouseUp,
+  };
 }

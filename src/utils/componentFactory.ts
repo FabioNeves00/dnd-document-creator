@@ -21,17 +21,21 @@ export function componentFactory(
         x,
         y,
         zIndex,
+        backgroundColor: "transparent",
+        textColor: "#000",
       };
     case "image":
       return {
         id,
         type: "image",
-        src: "",
+        content: "",
         alt: "",
         selected: false,
         x,
         y,
         zIndex,
+        backgroundColor: "transparent",
+        textColor: "#000",
       };
     case "button":
       return {
@@ -42,6 +46,8 @@ export function componentFactory(
         x,
         y,
         zIndex,
+        backgroundColor: "transparent",
+        textColor: "#000",
       };
     default:
       return null;

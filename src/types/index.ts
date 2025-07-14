@@ -30,7 +30,6 @@ export type TextComponent = CanvasComponent & {
 // create component types
 export type ImageComponent = CanvasComponent & {
   type: "image";
-  src: string;
   alt: string;
 };
 

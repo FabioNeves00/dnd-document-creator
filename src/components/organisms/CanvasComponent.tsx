@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { useRef, useState, useCallback } from "react";
 import clsx from "clsx";
 import type { Component as ComponentType, TextComponent } from "../../types";
 
@@ -32,82 +32,105 @@ const CanvasComponent: React.FC<CanvasComponentProps> = ({
   onMove,
   onPropChange,
 }) => {
-  const dragging = useRef(false);
-  const offset = useRef({ x: 0, y: 0 });
-
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (!onMove) return;
-    dragging.current = true;
-    offset.current = {
-      x: e.nativeEvent.offsetX,
-      y: e.nativeEvent.offsetY,
-    };
-    window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("mouseup", handleMouseUp);
-  };
-
-  const handleMouseMove = (e: MouseEvent) => {
-    if (!dragging.current || !onMove) return;
-    const canvas = (e.target as HTMLElement).closest(
-      '[data-cy="canvas"]'
-    ) as HTMLElement;
-    if (!canvas) return;
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left - offset.current.x;
-    const y = e.clientY - rect.top - offset.current.y;
-    onMove(comp.id, x, y);
-  };
-
-  const handleMouseUp = () => {
-    dragging.current = false;
-    window.removeEventListener("mousemove", handleMouseMove);
-    window.removeEventListener("mouseup", handleMouseUp);
-  };
-
-  // Handles de resize
-  const resizing = useRef<null | {
+  const [dragging, setDragging] = useState(false);
+  const [resizing, setResizing] = useState<null | {
     startX: number;
     startY: number;
     startWidth: number;
     startHeight: number;
     direction: string;
   }>(null);
+  const offset = useRef({ x: 0, y: 0 });
 
+  // Drag
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      if (!onMove) return;
+      setDragging(true);
+      offset.current = {
+        x: e.nativeEvent.offsetX,
+        y: e.nativeEvent.offsetY,
+      };
+    },
+    [onMove]
+  );
+
+  const handleMouseMove = useCallback(
+    (e: MouseEvent) => {
+      if (!dragging || !onMove) return;
+      const target = e.target as HTMLElement;
+      const canvas = target.closest('[data-cy="canvas"]') as HTMLElement;
+      if (!canvas) return;
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left - offset.current.x;
+      const y = e.clientY - rect.top - offset.current.y;
+      onMove(comp.id, x, y);
+    },
+    [dragging, onMove, comp.id]
+  );
+
+  const handleMouseUp = useCallback(() => {
+    setDragging(false);
+  }, []);
+
+  // Resize
   const handleResizeMouseDown = (dir: string) => (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!onPropChange) return;
-    resizing.current = {
+    setResizing({
       startX: e.clientX,
       startY: e.clientY,
-      startWidth: comp.width || 120,
-      startHeight: comp.height || 32,
+      startWidth: Number(comp.width) || 120,
+      startHeight: Number(comp.height) || 32,
       direction: dir,
-    };
-    window.addEventListener("mousemove", handleResizeMouseMove);
-    window.addEventListener("mouseup", handleResizeMouseUp);
+    });
   };
 
-  const handleResizeMouseMove = (e: MouseEvent) => {
-    if (!resizing.current || !onPropChange) return;
-    const dx = e.clientX - resizing.current.startX;
-    const dy = e.clientY - resizing.current.startY;
-    let newWidth = resizing.current.startWidth;
-    let newHeight = resizing.current.startHeight;
-    if (resizing.current.direction.includes("right")) newWidth += dx;
-    if (resizing.current.direction.includes("left")) newWidth -= dx;
-    if (resizing.current.direction.includes("bottom")) newHeight += dy;
-    if (resizing.current.direction.includes("top")) newHeight -= dy;
-    newWidth = Math.max(20, newWidth);
-    newHeight = Math.max(20, newHeight);
-    onPropChange(comp.id, "width", String(Math.round(newWidth)));
-    onPropChange(comp.id, "height", String(Math.round(newHeight)));
-  };
+  const handleResizeMouseMove = useCallback(
+    (e: MouseEvent) => {
+      if (!resizing || !onPropChange) return;
+      const dx = e.clientX - resizing.startX;
+      const dy = e.clientY - resizing.startY;
+      let newWidth = resizing.startWidth;
+      let newHeight = resizing.startHeight;
+      if (resizing.direction.includes("right")) newWidth += dx;
+      if (resizing.direction.includes("left")) newWidth -= dx;
+      if (resizing.direction.includes("bottom")) newHeight += dy;
+      if (resizing.direction.includes("top")) newHeight -= dy;
+      newWidth = Math.max(20, newWidth);
+      newHeight = Math.max(20, newHeight);
+      onPropChange(comp.id, "width", String(Math.round(newWidth)));
+      onPropChange(comp.id, "height", String(Math.round(newHeight)));
+    },
+    [resizing, onPropChange, comp.id]
+  );
 
-  const handleResizeMouseUp = () => {
-    resizing.current = null;
-    window.removeEventListener("mousemove", handleResizeMouseMove);
-    window.removeEventListener("mouseup", handleResizeMouseUp);
-  };
+  const handleResizeMouseUp = useCallback(() => {
+    setResizing(null);
+  }, []);
+
+  // Eventos globais só enquanto drag/resize ativo
+  React.useEffect(() => {
+    if (dragging) {
+      window.addEventListener("mousemove", handleMouseMove);
+      window.addEventListener("mouseup", handleMouseUp);
+      return () => {
+        window.removeEventListener("mousemove", handleMouseMove);
+        window.removeEventListener("mouseup", handleMouseUp);
+      };
+    }
+  }, [dragging, handleMouseMove, handleMouseUp]);
+
+  React.useEffect(() => {
+    if (resizing) {
+      window.addEventListener("mousemove", handleResizeMouseMove);
+      window.addEventListener("mouseup", handleResizeMouseUp);
+      return () => {
+        window.removeEventListener("mousemove", handleResizeMouseMove);
+        window.removeEventListener("mouseup", handleResizeMouseUp);
+      };
+    }
+  }, [resizing, handleResizeMouseMove, handleResizeMouseUp]);
 
   // Edição inline
   const handleChange =
@@ -164,7 +187,7 @@ const CanvasComponent: React.FC<CanvasComponentProps> = ({
     >
       {comp.type === "textbox" && (
         <textarea
-          className={`bg-transparent border-none outline-none w-full text-gray-100 resize-none ${textAlignClass}`}
+          className={`bg-transparent border-none outline-none w-full resize-none ${textAlignClass}`}
           value={comp.content || ""}
           onChange={(e) => {
             handleChange("content")(e);
@@ -174,12 +197,12 @@ const CanvasComponent: React.FC<CanvasComponentProps> = ({
           }}
           placeholder="Texto"
           rows={1}
-          style={{ overflow: "hidden" }}
+          style={{ overflow: "hidden", color: comp.textColor || "#000" }}
         />
       )}
       {comp.type === "textarea" && (
         <textarea
-          className={`bg-transparent border-none outline-none w-full text-gray-100 resize-none ${textAlignClass}`}
+          className={`bg-transparent border-none outline-none w-full resize-none ${textAlignClass}`}
           value={comp.content || ""}
           onChange={(e) => {
             handleChange("content")(e);
@@ -189,12 +212,12 @@ const CanvasComponent: React.FC<CanvasComponentProps> = ({
           }}
           placeholder="Área de texto"
           rows={1}
-          style={{ overflow: "hidden" }}
+          style={{ overflow: "hidden", color: comp.textColor || "#000" }}
         />
       )}
       {comp.type === "input" && (
         <textarea
-          className={`bg-transparent border-none outline-none w-full text-gray-100 resize-none ${textAlignClass}`}
+          className={`bg-transparent border-none outline-none w-full resize-none ${textAlignClass}`}
           value={comp.content || ""}
           onChange={(e) => {
             handleChange("content")(e);
@@ -204,12 +227,12 @@ const CanvasComponent: React.FC<CanvasComponentProps> = ({
           }}
           placeholder="Campo de entrada"
           rows={1}
-          style={{ overflow: "hidden" }}
+          style={{ overflow: "hidden", color: comp.textColor || "#000" }}
         />
       )}
       {comp.type === "button" && (
         <textarea
-          className={`bg-transparent border-none outline-none w-full text-gray-100 resize-none text-center ${textAlignClass}`}
+          className={`bg-transparent border-none outline-none w-full resize-none text-center ${textAlignClass}`}
           value={comp.content || ""}
           onChange={(e) => {
             handleChange("content")(e);
@@ -219,24 +242,18 @@ const CanvasComponent: React.FC<CanvasComponentProps> = ({
           }}
           placeholder="Botão"
           rows={1}
-          style={{ overflow: "hidden" }}
+          style={{ overflow: "hidden", color: comp.textColor || "#000" }}
         />
       )}
       {comp.type === "image" && (
-        <div className="flex flex-col items-center w-full">
+        <div className="flex flex-col items-center w-full h-full">
           <img
             src={comp.content || "https://placehold.co/120x60?text=Imagem"}
             alt="Imagem"
-            className="max-w-[120px] max-h-[60px] object-contain rounded bg-gray-700"
+            className="w-full h-full object-contain rounded bg-gray-700"
             draggable={false}
             style={{ pointerEvents: "none" }}
-          />
-          <input
-            className="mt-1 bg-transparent border border-[#2d3646] rounded p-1 text-xs text-gray-200 w-full"
-            value={comp.content || ""}
-            onChange={handleChange("content")}
-            placeholder="URL da imagem"
-            style={{ pointerEvents: "auto" }}
+            data-cy="canvas-image"
           />
         </div>
       )}

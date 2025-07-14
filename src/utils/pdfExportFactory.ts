@@ -128,8 +128,15 @@ async function drawImageComponent(
       let image;
       if (imgData.startsWith("data:image/png")) {
         image = await pdfDoc.embedPng(imgData);
-      } else {
+      } else if (
+        imgData.startsWith("data:image/jpeg") ||
+        imgData.startsWith("data:image/jpg")
+      ) {
         image = await pdfDoc.embedJpg(imgData);
+      } else {
+        throw new Error(
+          "Formato de imagem não suportado para PDF: " + imgData.slice(0, 30)
+        );
       }
       page.drawImage(image, {
         x,
@@ -137,7 +144,13 @@ async function drawImageComponent(
         width: w,
         height: h,
       });
-    } catch {
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error(
+        "Erro ao embutir imagem no PDF:",
+        err,
+        comp.content?.slice(0, 100)
+      );
       page.drawRectangle({
         x,
         y,

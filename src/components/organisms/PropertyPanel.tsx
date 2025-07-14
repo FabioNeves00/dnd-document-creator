@@ -46,12 +46,21 @@ const PropertyPanel: React.FC<PropertyPanelProps> = ({
       )}
       {selectedComponent.type === "image" && (
         <label className="flex flex-col gap-1">
-          <span className="text-sm text-gray-300">URL da imagem</span>
+          <span className="text-sm text-gray-300">Imagem</span>
           <input
+            type="file"
+            accept="image/png,image/jpeg"
             className="border border-[#2d3646] rounded p-2 text-gray-200 bg-[#232a36] placeholder-gray-400"
-            value={selectedComponent.content || ""}
-            onChange={(e) => onPropChange("content", e.target.value)}
-            placeholder="Cole a URL da imagem"
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              const reader = new FileReader();
+              reader.onload = (ev) => {
+                onPropChange("content", ev.target?.result as string);
+              };
+              reader.readAsDataURL(file);
+            }}
+            data-cy="property-image-upload"
           />
         </label>
       )}
