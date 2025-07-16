@@ -1,6 +1,5 @@
 /// <reference types="cypress" />
 
-import React from "react";
 import Canvas from "../Canvas";
 
 describe("Canvas organism", () => {
