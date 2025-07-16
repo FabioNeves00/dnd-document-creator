@@ -29,14 +29,18 @@ const PropertyPanelWrapper: React.FC<PropertyPanelWrapperProps> = ({
 }) => {
   if (!selectedComponent) {
     return (
-      <div className="w-full h-full flex items-center justify-center text-gray-500 select-none">
+      <div
+        className="w-full h-full flex items-center justify-center text-gray-500 select-none"
+        data-cy="property-panel-empty"
+      >
         <span>Nenhum componente selecionado</span>
       </div>
     );
   }
   return (
-    <>
-      <div className="mb-4">
+    <div className="h-full flex flex-col" data-cy="property-panel-wrapper">
+      {/* Header fixo */}
+      <div className="flex-shrink-0 mb-4">
         <div className="flex items-center gap-2 text-lg font-bold text-gray-100 mb-4">
           <Squares2X2Icon
             className="w-5 h-5 text-gray-300"
@@ -87,11 +91,15 @@ const PropertyPanelWrapper: React.FC<PropertyPanelWrapperProps> = ({
           </Button>
         </div>
       </div>
-      <PropertyPanel
-        selectedComponent={selectedComponent}
-        onPropChange={onPropChange}
-      />
-    </>
+
+      {/* Área com scroll */}
+      <div className="flex-1 overflow-y-auto overflow-x-hidden pr-2 pb-4">
+        <PropertyPanel
+          selectedComponent={selectedComponent}
+          onPropChange={onPropChange}
+        />
+      </div>
+    </div>
   );
 };
 

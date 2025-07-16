@@ -43,22 +43,6 @@ const App = () => {
 
   return (
     <div className="flex flex-col h-screen w-screen">
-      <header className="w-full flex items-center justify-end gap-4 px-8 py-4 bg-[#181c23] border-b border-[#232a36] z-10">
-        <button
-          data-cy="export-json"
-          className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition"
-          onClick={handleExportJSON}
-        >
-          Exportar JSON
-        </button>
-        <button
-          data-cy="export-pdf"
-          className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded transition"
-          onClick={handleExportPDF}
-        >
-          Exportar PDF
-        </button>
-      </header>
       <div className="flex-1">
         <EditorLayout
           sidebar={
@@ -66,6 +50,8 @@ const App = () => {
               components={COMPONENTS}
               groupOrder={groupOrder}
               onDragStart={handleDragStart}
+              onExportJSON={handleExportJSON}
+              onExportPDF={handleExportPDF}
             />
           }
           canvas={

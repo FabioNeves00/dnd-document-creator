@@ -1,15 +1,37 @@
 import type { Component } from "../types";
 
-export function bringForward(components: Component[], id: string): Component[] {
-  const idx = components.findIndex((c) => c.id === id);
-  if (idx === -1) return components;
-  const maxZ = Math.max(...components.map((c) => c.zIndex ?? 0));
-  return components.map((c) => (c.id === id ? { ...c, zIndex: maxZ + 1 } : c));
+export function bringForward(
+  components: Component[],
+  componentId: string
+): Component[] {
+  const componentIndex = components.findIndex(
+    (component) => component.id === componentId
+  );
+  if (componentIndex === -1) return components;
+  const maxZIndex = Math.max(
+    ...components.map((component) => component.zIndex ?? 0)
+  );
+  return components.map((component) =>
+    component.id === componentId
+      ? { ...component, zIndex: maxZIndex + 1 }
+      : component
+  );
 }
 
-export function sendBackward(components: Component[], id: string): Component[] {
-  const idx = components.findIndex((c) => c.id === id);
-  if (idx === -1) return components;
-  const minZ = Math.min(...components.map((c) => c.zIndex ?? 0));
-  return components.map((c) => (c.id === id ? { ...c, zIndex: minZ - 1 } : c));
+export function sendBackward(
+  components: Component[],
+  componentId: string
+): Component[] {
+  const componentIndex = components.findIndex(
+    (component) => component.id === componentId
+  );
+  if (componentIndex === -1) return components;
+  const minZIndex = Math.min(
+    ...components.map((component) => component.zIndex ?? 0)
+  );
+  return components.map((component) =>
+    component.id === componentId
+      ? { ...component, zIndex: minZIndex - 1 }
+      : component
+  );
 }

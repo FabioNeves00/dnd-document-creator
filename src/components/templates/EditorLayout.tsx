@@ -18,8 +18,8 @@ const EditorLayout: React.FC<EditorLayoutProps> = ({
     <main className="flex-1 flex flex-col items-center justify-center overflow-auto p-8">
       {canvas}
     </main>
-    <aside className="w-80 min-w-[220px] max-w-[340px] p-4 border-l border-[#232a36] bg-[#1a202c] flex-shrink-0">
-      {propertyPanel}
+    <aside className="w-80 min-w-[220px] max-w-[340px] p-4 border-l border-[#232a36] bg-[#1a202c] flex-shrink-0 h-full">
+      <div className="h-full">{propertyPanel}</div>
     </aside>
   </div>
 );

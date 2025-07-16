@@ -1,154 +1,161 @@
 import { useState } from "react";
 import type { Component } from "../types";
 import { componentFactory } from "../utils/componentFactory";
+import { bringForward, sendBackward } from "../utils/zIndexUtils";
+import { clamp, updateComponentById, parseOptions } from "../utils/helpers";
 
 export function useCanvasComponents() {
   const [canvasComponents, setCanvasComponents] = useState<Component[]>([]);
-  const [dragType, setDragType] = useState<Component["type"] | null>(null);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [currentDragType, setCurrentDragType] = useState<
+    Component["type"] | null
+  >(null);
+  const [selectedComponentId, setSelectedComponentId] = useState<string | null>(
+    null
+  );
 
-  const handleDragStart = (type: Component["type"]) => setDragType(type);
+  const CANVAS_HEIGHT_PX = 1123;
+  const CANVAS_WIDTH_PX = 794;
 
-  const A4_WIDTH = 1123;
-  const A4_HEIGHT = 794;
+  const handleComponentDragStart = (type: Component["type"]) =>
+    setCurrentDragType(type);
 
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    if (!dragType) return;
-    const id = `${dragType}-${Date.now()}`;
-    const canvasRect = (e.target as HTMLElement).getBoundingClientRect();
-    let x = e.clientX - canvasRect.left;
-    let y = e.clientY - canvasRect.top;
-    // Clamp para dentro da folha
-    x = Math.max(0, Math.min(x, A4_WIDTH - 120));
-    y = Math.max(0, Math.min(y, A4_HEIGHT - 32));
-    const maxZ = canvasComponents.reduce(
-      (max, c) => Math.max(max, c.zIndex ?? 0),
+  const handleCanvasDrop = (event: React.DragEvent) => {
+    event.preventDefault();
+    if (!currentDragType) return;
+    const componentId = `${currentDragType}-${Date.now()}`;
+    const canvasRect = (event.target as HTMLElement).getBoundingClientRect();
+    let dropX = event.clientX - canvasRect.left;
+    let dropY = event.clientY - canvasRect.top;
+    dropX = clamp(dropX, 0, CANVAS_WIDTH_PX - 120);
+    dropY = clamp(dropY, 0, CANVAS_HEIGHT_PX - 32);
+    const maxZIndex = canvasComponents.reduce(
+      (maximumZ, component) => Math.max(maximumZ, component.zIndex ?? 0),
       0
     );
-    const newComponent = componentFactory(dragType, id, x, y, maxZ + 1);
+    const newComponent = componentFactory(
+      currentDragType,
+      componentId,
+      dropX,
+      dropY,
+      maxZIndex + 1
+    );
     if (!newComponent) return;
-    setCanvasComponents((prev) => [...prev, newComponent]);
-    setDragType(null);
+    setCanvasComponents((prevComponents) => [...prevComponents, newComponent]);
+    setCurrentDragType(null);
   };
 
-  const handleDragOver = (e: React.DragEvent) => e.preventDefault();
+  const handleCanvasDragOver = (event: React.DragEvent) =>
+    event.preventDefault();
 
-  const handleSelect = (id: string) => {
-    setSelectedId(id);
-    setCanvasComponents((prev) =>
-      prev.map((c) => ({ ...c, selected: c.id === id }))
+  const handleComponentSelect = (componentId: string | null) => {
+    setSelectedComponentId(componentId);
+    setCanvasComponents((prevComponents) =>
+      prevComponents.map((component) => ({
+        ...component,
+        selected: component.id === componentId,
+      }))
     );
   };
 
-  const handlePropChangeComponent = (
-    id: string,
-    prop: string,
-    value: string
+  const handleUpdateComponentProperty = (
+    componentId: string,
+    propertyName: string,
+    propertyValue: string
   ) => {
-    setCanvasComponents((prev) =>
-      prev.map((c) => {
-        if (c.id !== id) return c;
-        if (prop === "options") {
-          return {
-            ...c,
-            options: value
-              .split(",")
-              .map((opt) => opt.trim())
-              .filter(Boolean),
-          };
+    setCanvasComponents((prevComponents) =>
+      updateComponentById(prevComponents, componentId, (component) => {
+        if (propertyName === "options") {
+          return { ...component, options: parseOptions(propertyValue) };
         }
-        return { ...c, [prop]: value };
+        return { ...component, [propertyName]: propertyValue };
       })
     );
   };
 
-  const handleMoveComponent = (id: string, x: number, y: number) => {
-    // Clamp para dentro da folha
-    const comp = canvasComponents.find((c) => c.id === id);
-    if (!comp) return;
-    const width = comp.width || 120;
-    const height = comp.height || 32;
-    const clampedX = Math.max(0, Math.min(x, A4_WIDTH - width));
-    const clampedY = Math.max(0, Math.min(y, A4_HEIGHT - height));
-    setCanvasComponents((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, x: clampedX, y: clampedY } : c))
+  const handleComponentMove = (
+    componentId: string,
+    newX: number,
+    newY: number
+  ) => {
+    const targetComponent = canvasComponents.find(
+      (component) => component.id === componentId
+    );
+    if (!targetComponent) return;
+    const componentWidth = targetComponent.width || 120;
+    const componentHeight = targetComponent.height || 32;
+    const clampedX = clamp(newX, 0, CANVAS_WIDTH_PX - componentWidth);
+    const clampedY = clamp(newY, 0, CANVAS_HEIGHT_PX - componentHeight);
+    setCanvasComponents((prevComponents) =>
+      updateComponentById(prevComponents, componentId, (component) => ({
+        ...component,
+        x: clampedX,
+        y: clampedY,
+      }))
     );
   };
 
-  const handleBringForward = () => {
-    if (!selectedId) return;
-    setCanvasComponents((prev) => {
-      const idx = prev.findIndex((c) => c.id === selectedId);
-      if (idx === -1) return prev;
-      const sorted = [...prev].sort((a, b) => a.zIndex - b.zIndex);
-      const current = sorted.find((c) => c.id === selectedId);
-      if (!current) return prev;
-      const currentIdx = sorted.indexOf(current);
-      if (currentIdx === sorted.length - 1) return prev;
-      const next = sorted[currentIdx + 1];
-      [current.zIndex, next.zIndex] = [next.zIndex, current.zIndex];
-      return [...sorted];
-    });
+  const handleBringComponentForward = () => {
+    if (!selectedComponentId) return;
+    setCanvasComponents((prevComponents) =>
+      bringForward(prevComponents, selectedComponentId)
+    );
   };
 
-  const handleSendBackward = () => {
-    if (!selectedId) return;
-    setCanvasComponents((prev) => {
-      const idx = prev.findIndex((c) => c.id === selectedId);
-      if (idx === -1) return prev;
-      const sorted = [...prev].sort((a, b) => a.zIndex - b.zIndex);
-      const current = sorted.find((c) => c.id === selectedId);
-      if (!current) return prev;
-      const currentIdx = sorted.indexOf(current);
-      if (currentIdx === 0) return prev;
-      const prevComp = sorted[currentIdx - 1];
-      [current.zIndex, prevComp.zIndex] = [prevComp.zIndex, current.zIndex];
-      return [...sorted];
-    });
+  const handleSendComponentBackward = () => {
+    if (!selectedComponentId) return;
+    setCanvasComponents((prevComponents) =>
+      sendBackward(prevComponents, selectedComponentId)
+    );
   };
 
-  const handlePropChange = (
-    prop: string | number | symbol,
-    value: string | undefined
+  const handleSelectedComponentPropertyChange = (
+    propertyName: string | number | symbol,
+    propertyValue: string | undefined
   ) => {
-    setCanvasComponents((prev) =>
-      prev.map((c) => {
-        if (c.id !== selectedId) return c;
-        if (prop === "width" || prop === "height") {
-          const num = value
-            ? Math.max(20, Math.min(1000, parseInt(value)))
+    if (!selectedComponentId) return;
+    setCanvasComponents((prevComponents) =>
+      updateComponentById(prevComponents, selectedComponentId, (component) => {
+        if (propertyName === "width" || propertyName === "height") {
+          const numericValue = propertyValue
+            ? clamp(parseInt(propertyValue), 20, 1000)
             : undefined;
-          return { ...c, [prop]: num };
+          return { ...component, [propertyName]: numericValue };
         }
-        if (prop === "fontSize" || prop === "fontWeight") {
-          return { ...c, [prop]: value };
+        if (propertyName === "fontSize") {
+          const numericValue = propertyValue
+            ? clamp(parseInt(propertyValue), 8, 100)
+            : 16;
+          return { ...component, [propertyName]: numericValue };
         }
-        return { ...c, [prop]: value };
+        return { ...component, [propertyName]: propertyValue };
       })
     );
   };
 
-  const handleRemoveComponent = () => {
-    if (!selectedId) return;
-    setCanvasComponents((prev) => prev.filter((c) => c.id !== selectedId));
-    setSelectedId(null);
+  const handleRemoveSelectedComponent = () => {
+    if (!selectedComponentId) return;
+    setCanvasComponents((prevComponents) =>
+      prevComponents.filter((component) => component.id !== selectedComponentId)
+    );
+    setSelectedComponentId(null);
   };
 
-  const selectedComponent = canvasComponents.find((c) => c.id === selectedId);
+  const selectedComponent = canvasComponents.find(
+    (component) => component.id === selectedComponentId
+  );
 
   return {
     canvasComponents,
     selectedComponent,
-    handleDragStart,
-    handleDrop,
-    handleDragOver,
-    handleSelect,
-    handleMoveComponent,
-    handlePropChangeComponent,
-    handleBringForward,
-    handleSendBackward,
-    handlePropChange,
-    handleRemoveComponent,
+    handleDragStart: handleComponentDragStart,
+    handleDrop: handleCanvasDrop,
+    handleDragOver: handleCanvasDragOver,
+    handleSelect: handleComponentSelect,
+    handleMoveComponent: handleComponentMove,
+    handlePropChangeComponent: handleUpdateComponentProperty,
+    handleBringForward: handleBringComponentForward,
+    handleSendBackward: handleSendComponentBackward,
+    handlePropChange: handleSelectedComponentPropertyChange,
+    handleRemoveComponent: handleRemoveSelectedComponent,
   };
 }

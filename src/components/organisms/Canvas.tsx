@@ -6,13 +6,13 @@ interface CanvasProps {
   components: CanvasComponentType[];
   onDrop: (e: React.DragEvent) => void;
   onDragOver: (e: React.DragEvent) => void;
-  onSelect: (id: string) => void;
+  onSelect: (id: string | null) => void;
   onMove: (id: string, x: number, y: number) => void;
   onPropChange: (id: string, prop: string, value: string) => void;
 }
 
-const A4_WIDTH = 1123; // px (paisagem)
-const A4_HEIGHT = 794; // px (paisagem)
+const CANVAS_HEIGHT_PX = 1123; // px (paisagem)
+const CANVAS_WIDTH_PX = 794; // px (paisagem)
 
 const Canvas: React.FC<CanvasProps> = ({
   components,
@@ -22,7 +22,9 @@ const Canvas: React.FC<CanvasProps> = ({
   onMove,
   onPropChange,
 }) => {
-  const sorted = [...components].sort((a, b) => a.zIndex - b.zIndex);
+  const sortedComponentsByZIndex = [...components].sort(
+    (a, b) => a.zIndex - b.zIndex
+  );
 
   // Handlers otimizados
   const handleDrop = useCallback(
@@ -51,22 +53,23 @@ const Canvas: React.FC<CanvasProps> = ({
         data-cy="canvas"
         onDrop={handleDrop}
         onDragOver={handleDragOver}
+        onClick={() => onSelect(null)}
         style={{
-          width: `${A4_WIDTH}px`,
-          height: `${A4_HEIGHT}px`,
+          width: `${CANVAS_WIDTH_PX}px`,
+          height: `${CANVAS_HEIGHT_PX}px`,
           userSelect: "none",
           overflow: "hidden",
         }}
       >
-        {sorted.map((comp) => {
+        {sortedComponentsByZIndex.map((comp) => {
           // Limitar visualização: só renderiza se estiver dentro da folha
           const left = Math.max(
             0,
-            Math.min(comp.x, A4_WIDTH - (comp.width || 120))
+            Math.min(comp.x, CANVAS_WIDTH_PX - (comp.width || 120))
           );
           const top = Math.max(
             0,
-            Math.min(comp.y, A4_HEIGHT - (comp.height || 32))
+            Math.min(comp.y, CANVAS_HEIGHT_PX - (comp.height || 32))
           );
           return (
             <div

@@ -20,10 +20,12 @@ export interface CanvasComponent {
 }
 
 export type TextComponent = CanvasComponent & {
-  type: "textbox" | "textarea" | "input";
-  fontSize: "sm" | "md" | "lg";
+  type: "textarea";
+  fontSize: number; // tamanho da fonte em px
   fontWeight: "normal" | "bold";
-  textAlign?: "left" | "center" | "right";
+  fontStyle: "normal" | "italic";
+  textDecoration: "none" | "underline";
+  textAlign: "left" | "center" | "right" | "justify";
   verticalAlign?: "top" | "middle" | "bottom";
 };
 
@@ -33,20 +35,4 @@ export type ImageComponent = CanvasComponent & {
   alt: string;
 };
 
-export type ButtonComponent = CanvasComponent & {
-  type: "button";
-  label?: string;
-};
-
-export type InputComponent = CanvasComponent & {
-  type: "input";
-  placeholder?: string;
-  textType?: "text" | "email" | "password" | "number";
-  label?: string;
-};
-
-export type Component =
-  | TextComponent
-  | ImageComponent
-  | ButtonComponent
-  | InputComponent;
+export type Component = TextComponent | ImageComponent;

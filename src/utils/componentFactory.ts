@@ -1,3 +1,5 @@
+import { DEFAULT_TEXT_PROPERTIES } from "../constants/properties/textProperties";
+import { DEFAULT_IMAGE_PROPERTIES } from "../constants/properties/imageProperties";
 import type { Component } from "../types";
 
 export function componentFactory(
@@ -8,46 +10,23 @@ export function componentFactory(
   zIndex: number
 ): Component | null {
   switch (type) {
-    case "textbox":
     case "textarea":
-    case "input":
       return {
+        ...DEFAULT_TEXT_PROPERTIES,
         id,
-        type,
-        content: "",
-        selected: false,
-        fontSize: "md",
-        fontWeight: "normal",
+        type: "textarea",
         x,
         y,
         zIndex,
-        backgroundColor: "transparent",
-        textColor: "#000",
       };
     case "image":
       return {
+        ...DEFAULT_IMAGE_PROPERTIES,
         id,
         type: "image",
-        content: "",
-        alt: "",
-        selected: false,
         x,
         y,
         zIndex,
-        backgroundColor: "transparent",
-        textColor: "#000",
-      };
-    case "button":
-      return {
-        id,
-        type: "button",
-        label: "",
-        selected: false,
-        x,
-        y,
-        zIndex,
-        backgroundColor: "transparent",
-        textColor: "#000",
       };
     default:
       return null;

@@ -1,4 +1,5 @@
-import { useRef, useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
+import { clamp } from "../utils/helpers";
 
 export function useComponentResize(onResize: (w: number, h: number) => void) {
   const [resizing, setResizing] = useState<null | {
@@ -10,7 +11,7 @@ export function useComponentResize(onResize: (w: number, h: number) => void) {
   }>(null);
 
   const handleResizeMouseDown = useCallback(
-    (dir: string, startWidth: number, startHeight: number) =>
+    (direction: string, startWidth: number, startHeight: number) =>
       (e: React.MouseEvent) => {
         e.stopPropagation();
         setResizing({
@@ -18,14 +19,14 @@ export function useComponentResize(onResize: (w: number, h: number) => void) {
           startY: e.clientY,
           startWidth,
           startHeight,
-          direction: dir,
+          direction,
         });
       },
     []
   );
 
   const handleResizeMouseMove = useCallback(
-    (e: React.MouseEvent) => {
+    (e: MouseEvent) => {
       if (!resizing) return;
       const dx = e.clientX - resizing.startX;
       const dy = e.clientY - resizing.startY;
@@ -35,8 +36,8 @@ export function useComponentResize(onResize: (w: number, h: number) => void) {
       if (resizing.direction.includes("left")) newWidth -= dx;
       if (resizing.direction.includes("bottom")) newHeight += dy;
       if (resizing.direction.includes("top")) newHeight -= dy;
-      newWidth = Math.max(20, newWidth);
-      newHeight = Math.max(20, newHeight);
+      newWidth = clamp(newWidth, 20, 1000);
+      newHeight = clamp(newHeight, 20, 1000);
       onResize(Math.round(newWidth), Math.round(newHeight));
     },
     [resizing, onResize]
@@ -45,6 +46,19 @@ export function useComponentResize(onResize: (w: number, h: number) => void) {
   const handleResizeMouseUp = useCallback(() => {
     setResizing(null);
   }, []);
+
+  // Event listeners globais
+  useEffect(() => {
+    if (resizing) {
+      document.addEventListener("mousemove", handleResizeMouseMove);
+      document.addEventListener("mouseup", handleResizeMouseUp);
+
+      return () => {
+        document.removeEventListener("mousemove", handleResizeMouseMove);
+        document.removeEventListener("mouseup", handleResizeMouseUp);
+      };
+    }
+  }, [resizing, handleResizeMouseMove, handleResizeMouseUp]);
 
   return {
     resizing,
