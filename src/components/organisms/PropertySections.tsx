@@ -10,6 +10,7 @@ import {
 import type {
   Component as CanvasComponentType,
   TextComponent,
+  SignatureComponent,
 } from "../../types";
 
 interface PropertySectionProps {
@@ -60,37 +61,6 @@ export const ContentSection: React.FC<PropertySectionProps> = ({
   return null;
 };
 
-// Seção de dimensões
-export const DimensionsSection: React.FC<PropertySectionProps> = ({
-  component,
-  onPropChange,
-}) => (
-  <div className="flex gap-4" data-cy="property-dimensions-section">
-    <div className="w-1/2">
-      <PropertyInput
-        label="Largura (px)"
-        type="number"
-        value={component.width}
-        min={20}
-        placeholder="Auto"
-        dataCy="property-width"
-        onChange={(value) => onPropChange("width", value)}
-      />
-    </div>
-    <div className="w-1/2">
-      <PropertyInput
-        label="Altura (px)"
-        type="number"
-        value={component.height}
-        min={20}
-        placeholder="Auto"
-        dataCy="property-height"
-        onChange={(value) => onPropChange("height", value)}
-      />
-    </div>
-  </div>
-);
-
 // Seção de cores
 export const ColorsSection: React.FC<PropertySectionProps> = ({
   component,
@@ -114,6 +84,29 @@ export const ColorsSection: React.FC<PropertySectionProps> = ({
   </div>
 );
 
+// Seção de dimensões
+export const SizeSection: React.FC<PropertySectionProps> = ({
+  component,
+  onPropChange,
+}) => (
+  <div className="grid grid-cols-2 gap-4" data-cy="property-size-section">
+    <PropertyInput
+      label="Largura (px)"
+      type="number"
+      value={component.width || 120}
+      dataCy="property-width"
+      onChange={(value) => onPropChange("width", value)}
+    />
+    <PropertyInput
+      label="Altura (px)"
+      type="number"
+      value={component.height || 32}
+      dataCy="property-height"
+      onChange={(value) => onPropChange("height", value)}
+    />
+  </div>
+);
+
 // Seção de tipografia (apenas para componentes de texto)
 export const TypographySection: React.FC<PropertySectionProps> = ({
   component,
@@ -121,6 +114,83 @@ export const TypographySection: React.FC<PropertySectionProps> = ({
 }) => {
   const isTextComponent = (comp: CanvasComponentType): comp is TextComponent =>
     comp.type === "textarea";
+
+  const isSignatureComponent = (
+    comp: CanvasComponentType
+  ): comp is SignatureComponent => comp.type === "signature";
+
+  if (isSignatureComponent(component)) {
+    return (
+      <div className="grid gap-4" data-cy="property-signature-section">
+        {/* Campo do texto da assinatura */}
+        <PropertyInput
+          label="Texto da assinatura"
+          value={component.signatureText || ""}
+          placeholder="Ex: Nome:"
+          dataCy="property-signature-text"
+          onChange={(value) => onPropChange("signatureText", value)}
+        />
+
+        {/* Largura da linha */}
+        <PropertyInput
+          label="Largura da linha (px)"
+          type="number"
+          value={component.lineWidth}
+          dataCy="property-line-width"
+          onChange={(value) => onPropChange("lineWidth", value)}
+        />
+
+        {/* Cor da linha */}
+        <PropertyInput
+          label="Cor da linha"
+          type="color"
+          value={component.lineColor || "#000"}
+          dataCy="property-line-color"
+          onChange={(value) => onPropChange("lineColor", value)}
+        />
+
+        {/* Alinhamento do texto */}
+        <PropertyButtonGrid
+          label="Alinhamento do texto"
+          value={component.textAlign}
+          options={createTextAlignOptions()}
+          dataCy="property-signature-text-align"
+          onChange={(value) => onPropChange("textAlign", value)}
+        />
+
+        {/* Tamanho da fonte */}
+        <PropertyInput
+          label="Tamanho da fonte (px)"
+          type="number"
+          value={component.fontSize}
+          dataCy="property-signature-font-size"
+          onChange={(value) => onPropChange("fontSize", value)}
+        />
+
+        {/* Peso da fonte */}
+        <PropertyButtonGrid
+          label="Peso da fonte"
+          value={component.fontWeight}
+          options={[
+            {
+              label: "Normal",
+              value: "normal",
+              icon: <span className="text-sm leading-none">N</span>,
+              tooltip: "Peso normal",
+            },
+            {
+              label: "Negrito",
+              value: "bold",
+              icon: <span className="text-sm font-bold leading-none">B</span>,
+              tooltip: "Texto em negrito",
+            },
+          ]}
+          dataCy="property-signature-font-weight"
+          onChange={(value) => onPropChange("fontWeight", value)}
+        />
+      </div>
+    );
+  }
 
   if (!isTextComponent(component)) return null;
 
@@ -149,8 +219,6 @@ export const TypographySection: React.FC<PropertySectionProps> = ({
         label="Tamanho da fonte (px)"
         type="number"
         value={component.fontSize}
-        min={8}
-        max={100}
         dataCy="property-font-size"
         onChange={(value) => onPropChange("fontSize", value)}
       />

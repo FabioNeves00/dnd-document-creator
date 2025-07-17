@@ -20,6 +20,7 @@ const App = () => {
     handleSendBackward,
     handlePropChange,
     handleRemoveComponent,
+    handleResizeComponent,
   } = useCanvasComponents();
 
   // Exportar JSON
@@ -61,6 +62,7 @@ const App = () => {
               onDragOver={handleDragOver}
               onSelect={handleSelect}
               onMove={handleMoveComponent}
+              onResize={handleResizeComponent}
               onPropChange={handlePropChangeComponent}
             />
           }

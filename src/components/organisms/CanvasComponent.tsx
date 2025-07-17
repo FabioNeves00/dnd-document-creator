@@ -1,6 +1,12 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import React, { useRef, useState } from "react";
 import clsx from "clsx";
-import type { Component as ComponentType, TextComponent } from "../../types";
+import type {
+  Component as ComponentType,
+  TextComponent,
+  DividerComponent,
+  SignatureComponent,
+} from "../../types";
 import { useComponentDrag } from "../../hooks/useComponentDrag";
 import { useComponentResize } from "../../hooks/useComponentResize";
 
@@ -17,16 +23,26 @@ const fontStyleMap = {
 const textDecorationMap = {
   none: "no-underline",
   underline: "underline",
+  "line-through": "line-through",
 } satisfies Record<TextComponent["textDecoration"], string>;
 
 function isTextComponent(comp: ComponentType): comp is TextComponent {
   return comp.type === "textarea";
 }
 
+function isDividerComponent(comp: ComponentType): comp is DividerComponent {
+  return comp.type === "divider";
+}
+
+function isSignatureComponent(comp: ComponentType): comp is SignatureComponent {
+  return comp.type === "signature";
+}
+
 interface CanvasComponentProps {
   comp: ComponentType;
   onSelect: (id: string) => void;
   onMove: (id: string, x: number, y: number) => void;
+  onResize?: (id: string, width: number, height: number) => void;
   onPropChange?: (id: string, prop: string, value: string) => void;
 }
 
@@ -34,13 +50,11 @@ const CanvasComponent: React.FC<CanvasComponentProps> = ({
   comp,
   onSelect,
   onMove,
+  onResize,
   onPropChange,
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const measureRef = useRef<HTMLDivElement>(null);
-  const hasUserResizedRef = useRef(false);
-  const initialContentRef = useRef<string>("");
 
   // Callbacks para os hooks
   const handleMove = (x: number, y: number) => {
@@ -48,69 +62,17 @@ const CanvasComponent: React.FC<CanvasComponentProps> = ({
   };
 
   const handleResize = (width: number, height: number) => {
-    hasUserResizedRef.current = true; // Marcar que usuário redimensionou
-    onPropChange?.(comp.id, "width", String(width));
-    onPropChange?.(comp.id, "height", String(height));
+    onResize?.(comp.id, width, height);
   };
 
   const { handleMouseDown } = useComponentDrag(handleMove);
-  const { resizing, handleResizeMouseDown } = useComponentResize(handleResize);
-
-  // Quando componente é criado, salvar conteúdo inicial
-  React.useEffect(() => {
-    if (isTextComponent(comp) && !initialContentRef.current) {
-      initialContentRef.current = comp.content || "";
-    }
-  }, []);
-
-  // Função para calcular altura necessária para o texto
-  const calculateTextHeight = React.useCallback(() => {
-    if (!isTextComponent(comp) || !comp.content || !measureRef.current)
-      return null;
-
-    const textComp = comp as TextComponent;
-    const measureElement = measureRef.current;
-    measureElement.style.width = `${textComp.width || 120}px`;
-    measureElement.style.fontSize = `${textComp.fontSize || 16}px`;
-    measureElement.style.fontWeight = textComp.fontWeight || "normal";
-    measureElement.style.fontStyle = textComp.fontStyle || "normal";
-    measureElement.style.textDecoration = textComp.textDecoration || "none";
-    measureElement.style.padding = "4px";
-    measureElement.style.lineHeight = "1.5";
-    measureElement.style.whiteSpace = "pre-wrap";
-    measureElement.style.wordWrap = "break-word";
-    measureElement.textContent = textComp.content || null;
-
-    const scrollHeight = measureElement.scrollHeight;
-    return Math.max(32, scrollHeight);
-  }, [comp]);
-
-  // Auto-resize APENAS se:
-  // 1. É um componente novo (sem resize manual ainda)
-  // 2. Não está sendo redimensionado agora
-  // 3. Conteúdo mudou significativamente do inicial
-  React.useEffect(() => {
-    if (!isTextComponent(comp) || !comp.content || !onPropChange) return;
-    if (hasUserResizedRef.current || resizing || isEditing) return;
-
-    // Só fazer auto-resize se é um componente "novo" (ainda não foi redimensionado)
-    const contentChanged = comp.content !== initialContentRef.current;
-    const isNewComponent = !hasUserResizedRef.current && contentChanged;
-
-    if (isNewComponent) {
-      const newHeight = calculateTextHeight();
-      if (newHeight && Math.abs(newHeight - (comp.height || 32)) > 10) {
-        // Delay para evitar conflitos
-        const timeoutId = setTimeout(() => {
-          if (!hasUserResizedRef.current && !resizing) {
-            onPropChange(comp.id, "height", String(newHeight));
-          }
-        }, 200);
-
-        return () => clearTimeout(timeoutId);
-      }
-    }
-  }, [comp.content, isEditing, resizing, calculateTextHeight, onPropChange]);
+  const { handleResizeStart } = useComponentResize({
+    onResize: handleResize,
+    minWidth: 50,
+    minHeight: 20,
+    maxWidth: 800,
+    maxHeight: 600,
+  });
 
   // Foco ao entrar no modo edição
   React.useEffect(() => {
@@ -120,13 +82,10 @@ const CanvasComponent: React.FC<CanvasComponentProps> = ({
         inputRef.current.value.length,
         inputRef.current.value.length
       );
-      // Resize apenas do textarea, não do componente
-      inputRef.current.style.height = "auto";
-      inputRef.current.style.height = `${inputRef.current.scrollHeight}px`;
     }
   }, [isEditing]);
 
-  // Resize apenas do textarea durante edição (não mexe no componente)
+  // Auto-resize do textarea durante edição (SEM afetar o componente)
   React.useEffect(() => {
     if (isEditing && inputRef.current) {
       inputRef.current.style.height = "auto";
@@ -174,6 +133,7 @@ const CanvasComponent: React.FC<CanvasComponentProps> = ({
 
   // Renderização condicional: só mostra textarea se isEditing
   const renderContent = () => {
+    // Componentes de texto editáveis
     if (isTextComponent(comp)) {
       const textAlignClass = getTextAlignClass(comp.textAlign || "left");
 
@@ -195,6 +155,11 @@ const CanvasComponent: React.FC<CanvasComponentProps> = ({
               fontWeight: comp.fontWeight,
               fontStyle: comp.fontStyle,
               textDecoration: comp.textDecoration,
+              lineHeight: "1.5",
+              padding: "4px",
+              boxSizing: "border-box",
+              whiteSpace: "pre-wrap",
+              wordWrap: "break-word",
             }}
             data-cy="editing-textarea"
           />
@@ -213,6 +178,10 @@ const CanvasComponent: React.FC<CanvasComponentProps> = ({
             textDecoration: comp.textDecoration,
             wordWrap: "break-word",
             overflowWrap: "break-word",
+            lineHeight: "1.5",
+            padding: "4px",
+            boxSizing: "border-box",
+            whiteSpace: "pre-wrap",
           }}
           data-cy="display-text"
         >
@@ -223,6 +192,57 @@ const CanvasComponent: React.FC<CanvasComponentProps> = ({
       );
     }
 
+    // Componente Divider
+    if (isDividerComponent(comp)) {
+      return (
+        <div className="w-full h-full flex items-center justify-center">
+          <div
+            className="w-full"
+            style={{
+              height: `${comp.thickness}px`,
+              backgroundColor:
+                comp.lineStyle === "solid" ? comp.lineColor : "transparent",
+              borderTop:
+                comp.lineStyle !== "solid"
+                  ? `${comp.thickness}px ${comp.lineStyle} ${comp.lineColor}`
+                  : "none",
+            }}
+            data-cy="divider-line"
+          />
+        </div>
+      );
+    }
+
+    // Componente Signature
+    if (isSignatureComponent(comp)) {
+      return (
+        <div className="w-full h-full flex flex-col items-center justify-center gap-1">
+          <div
+            className="border-b"
+            style={{
+              width: `${comp.lineWidth}px`,
+              borderColor: comp.lineColor,
+              borderBottomWidth: "1px",
+            }}
+            data-cy="signature-line"
+          />
+          <div
+            className="text-center"
+            style={{
+              fontSize: `${comp.fontSize}px`,
+              fontWeight: comp.fontWeight,
+              color: comp.textColor || "#000",
+              textAlign: comp.textAlign,
+            }}
+            data-cy="signature-text"
+          >
+            {comp.signatureText}
+          </div>
+        </div>
+      );
+    }
+
+    // Componente Image
     if (comp.type === "image") {
       return (
         <div className="flex flex-col items-center w-full h-full">
@@ -240,30 +260,53 @@ const CanvasComponent: React.FC<CanvasComponentProps> = ({
     return null;
   };
 
+  const currentWidth = comp.width || 120;
+  const currentHeight = comp.height || 32;
+
+  const getCursorClass = (direction: string) => {
+    switch (direction) {
+      case "top-left":
+      case "bottom-right":
+        return "cursor-nw-resize";
+      case "top-right":
+      case "bottom-left":
+        return "cursor-ne-resize";
+      case "top":
+      case "bottom":
+        return "cursor-ns-resize";
+      case "left":
+      case "right":
+        return "cursor-ew-resize";
+      default:
+        return "cursor-pointer";
+    }
+  };
+
+  const ResizeHandle = ({
+    direction,
+    className,
+  }: {
+    direction: string;
+    className: string;
+  }) => (
+    <div
+      className={`absolute ${className} w-2 h-2 bg-blue-500 border border-white ${getCursorClass(
+        direction
+      )} z-10 hover:bg-blue-600 transition-colors`}
+      onMouseDown={(e) =>
+        handleResizeStart(e, direction, currentWidth, currentHeight)
+      }
+      data-cy={`resize-handle-${direction}`}
+      title={`Redimensionar ${direction.replace("-", " ")}`}
+    />
+  );
+
   return (
     <>
-      {/* Elemento invisível para medição de texto */}
-      {isTextComponent(comp) && (
-        <div
-          ref={measureRef}
-          style={{
-            position: "absolute",
-            top: "-9999px",
-            left: "-9999px",
-            visibility: "hidden",
-            whiteSpace: "pre-wrap",
-            wordWrap: "break-word",
-            overflowWrap: "break-word",
-            lineHeight: "1.5",
-          }}
-          aria-hidden="true"
-        />
-      )}
-
       <div
         data-cy={`canvas-${comp.type}`}
         className={clsx(
-          "border rounded p-1 mb-2 cursor-move select-none min-w-[120px] min-h-[32px] flex",
+          "rounded p-1 mb-2 cursor-move select-none min-w-[120px] min-h-[32px] flex",
           comp.selected && "ring-2 ring-blue-500 selected",
           isTextComponent(comp) && fontWeightMap[comp.fontWeight],
           isTextComponent(comp) && fontStyleMap[comp.fontStyle],
@@ -297,60 +340,35 @@ const CanvasComponent: React.FC<CanvasComponentProps> = ({
         }}
       >
         {renderContent()}
+
+        {/* Handles de redimensionamento - apenas quando selecionado */}
         {comp.selected && (
           <>
-            {/* Handles de resize nos 4 cantos */}
-            <div
-              onMouseDown={handleResizeMouseDown(
-                "bottom-right",
-                comp.width || 120,
-                comp.height || 32
-              )}
-              className="absolute right-0 bottom-0 w-3 h-3 bg-blue-500 rounded-full cursor-nwse-resize z-20 border-2 border-white"
-              style={{
-                transform: "translate(50%, 50%)",
-                pointerEvents: "auto",
-              }}
-              data-cy="resize-handle-br"
+            <ResizeHandle direction="top-left" className="-top-1 -left-1" />
+            <ResizeHandle direction="top-right" className="-top-1 -right-1" />
+            <ResizeHandle
+              direction="bottom-left"
+              className="-bottom-1 -left-1"
             />
-            <div
-              onMouseDown={handleResizeMouseDown(
-                "bottom-left",
-                comp.width || 120,
-                comp.height || 32
-              )}
-              className="absolute left-0 bottom-0 w-3 h-3 bg-blue-500 rounded-full cursor-nesw-resize z-20 border-2 border-white"
-              style={{
-                transform: "translate(-50%, 50%)",
-                pointerEvents: "auto",
-              }}
-              data-cy="resize-handle-bl"
+            <ResizeHandle
+              direction="bottom-right"
+              className="-bottom-1 -right-1"
             />
-            <div
-              onMouseDown={handleResizeMouseDown(
-                "top-right",
-                comp.width || 120,
-                comp.height || 32
-              )}
-              className="absolute right-0 top-0 w-3 h-3 bg-blue-500 rounded-full cursor-nesw-resize z-20 border-2 border-white"
-              style={{
-                transform: "translate(50%, -50%)",
-                pointerEvents: "auto",
-              }}
-              data-cy="resize-handle-tr"
+            <ResizeHandle
+              direction="top"
+              className="-top-1 left-1/2 transform -translate-x-1/2"
             />
-            <div
-              onMouseDown={handleResizeMouseDown(
-                "top-left",
-                comp.width || 120,
-                comp.height || 32
-              )}
-              className="absolute left-0 top-0 w-3 h-3 bg-blue-500 rounded-full cursor-nwse-resize z-20 border-2 border-white"
-              style={{
-                transform: "translate(-50%, -50%)",
-                pointerEvents: "auto",
-              }}
-              data-cy="resize-handle-tl"
+            <ResizeHandle
+              direction="bottom"
+              className="-bottom-1 left-1/2 transform -translate-x-1/2"
+            />
+            <ResizeHandle
+              direction="left"
+              className="top-1/2 -left-1 transform -translate-y-1/2"
+            />
+            <ResizeHandle
+              direction="right"
+              className="top-1/2 -right-1 transform -translate-y-1/2"
             />
           </>
         )}

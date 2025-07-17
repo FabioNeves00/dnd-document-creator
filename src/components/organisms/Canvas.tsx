@@ -8,6 +8,7 @@ interface CanvasProps {
   onDragOver: (e: React.DragEvent) => void;
   onSelect: (id: string | null) => void;
   onMove: (id: string, x: number, y: number) => void;
+  onResize: (id: string, width: number, height: number) => void;
   onPropChange: (id: string, prop: string, value: string) => void;
 }
 
@@ -20,6 +21,7 @@ const Canvas: React.FC<CanvasProps> = ({
   onDragOver,
   onSelect,
   onMove,
+  onResize,
   onPropChange,
 }) => {
   const sortedComponentsByZIndex = [...components].sort(
@@ -86,6 +88,7 @@ const Canvas: React.FC<CanvasProps> = ({
                 comp={comp}
                 onSelect={onSelect}
                 onMove={onMove}
+                onResize={onResize}
                 onPropChange={onPropChange}
               />
             </div>

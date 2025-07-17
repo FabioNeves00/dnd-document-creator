@@ -5,8 +5,8 @@ import type {
 } from "../../types";
 import {
   ContentSection,
-  DimensionsSection,
   ColorsSection,
+  SizeSection,
   TypographySection,
 } from "./PropertySections";
 
@@ -35,7 +35,7 @@ const PropertyPanel: React.FC<PropertyPanelProps> = ({
         onPropChange={handlePropChange}
       />
 
-      <DimensionsSection
+      <SizeSection
         component={selectedComponent}
         onPropChange={handlePropChange}
       />

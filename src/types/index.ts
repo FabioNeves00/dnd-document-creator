@@ -24,9 +24,26 @@ export type TextComponent = CanvasComponent & {
   fontSize: number; // tamanho da fonte em px
   fontWeight: "normal" | "bold";
   fontStyle: "normal" | "italic";
-  textDecoration: "none" | "underline";
+  textDecoration: "none" | "underline" | "line-through";
   textAlign: "left" | "center" | "right" | "justify";
-  verticalAlign?: "top" | "middle" | "bottom";
+  verticalAlign: "top" | "middle" | "bottom";
+};
+
+export type DividerComponent = CanvasComponent & {
+  type: "divider";
+  thickness: number; // espessura da linha em px
+  lineStyle: "solid" | "dashed" | "dotted";
+  lineColor: string;
+};
+
+export type SignatureComponent = CanvasComponent & {
+  type: "signature";
+  lineWidth: number; // largura da linha em px
+  lineColor: string;
+  signatureText: string; // texto abaixo da linha
+  fontSize: number;
+  fontWeight: "normal" | "bold";
+  textAlign: "left" | "center" | "right";
 };
 
 // create component types
@@ -35,4 +52,8 @@ export type ImageComponent = CanvasComponent & {
   alt: string;
 };
 
-export type Component = TextComponent | ImageComponent;
+export type Component =
+  | TextComponent
+  | ImageComponent
+  | DividerComponent
+  | SignatureComponent;

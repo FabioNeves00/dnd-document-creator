@@ -1,5 +1,10 @@
 import { PDFDocument, StandardFonts, rgb, PDFPage, PDFFont } from "pdf-lib";
-import type { Component, TextComponent } from "../types";
+import type {
+  Component,
+  TextComponent,
+  DividerComponent,
+  SignatureComponent,
+} from "../types";
 import { getImageDataUrl } from "./imageUtils";
 
 // Tamanho A4 em pontos (paisagem): 842 x 595
@@ -52,6 +57,20 @@ export const exportCanvasToPDF = async (
         break;
       case "image":
         await drawImageComponent(pdfDoc, page, comp, x, y, w, h);
+        break;
+      case "divider":
+        drawDividerComponent(page, comp, x, y, w, h);
+        break;
+      case "signature":
+        drawSignatureComponent(
+          page,
+          { helvetica, helveticaBold, helveticaOblique, helveticaBoldOblique },
+          comp,
+          x,
+          y,
+          w,
+          h
+        );
         break;
       default:
         drawDefaultComponent(page, helvetica, comp, x, y, w, h);
@@ -282,7 +301,6 @@ async function drawImageComponent(
         height: drawHeight,
       });
     } catch (err) {
-      // eslint-disable-next-line no-console
       console.error(
         "Erro ao embutir imagem no PDF:",
         err,
@@ -346,6 +364,92 @@ function drawDefaultComponent(
     size: 12,
     font,
     color: rgb(1, 1, 1),
+  });
+}
+
+function drawDividerComponent(
+  page: PDFPage,
+  comp: DividerComponent,
+  x: number,
+  y: number,
+  w: number,
+  h: number
+) {
+  const centerY = y + h / 2;
+  const thickness = Number(comp.thickness) || 1;
+
+  // Desenhar linha baseada no estilo
+  if (comp.lineStyle === "solid") {
+    page.drawRectangle({
+      x,
+      y: centerY - thickness / 2,
+      width: w,
+      height: thickness,
+      color: rgbHex(comp.lineColor || "#000000"),
+    });
+  } else {
+    // Para dashed e dotted, vamos desenhar como linha sólida no PDF
+    // (implementação mais complexa seria necessária para dashes reais)
+    page.drawLine({
+      start: { x: x, y: centerY },
+      end: { x: x + w, y: centerY },
+      thickness: thickness,
+      color: rgbHex(comp.lineColor || "#000000"),
+    });
+  }
+}
+
+function drawSignatureComponent(
+  page: PDFPage,
+  fonts: {
+    helvetica: PDFFont;
+    helveticaBold: PDFFont;
+    helveticaOblique: PDFFont;
+    helveticaBoldOblique: PDFFont;
+  },
+  comp: SignatureComponent,
+  x: number,
+  y: number,
+  w: number,
+  h: number
+) {
+  // Desenhar linha de assinatura
+  const lineWidth = Number(comp.lineWidth) || 200;
+  const lineY = y + h * 0.6; // Posição da linha (60% da altura)
+  const lineStartX = x + (w - lineWidth) / 2; // Centralizar linha
+
+  page.drawLine({
+    start: { x: lineStartX, y: lineY },
+    end: { x: lineStartX + lineWidth, y: lineY },
+    thickness: 1,
+    color: rgbHex(comp.lineColor || "#000000"),
+  });
+
+  // Desenhar texto da assinatura
+  const font =
+    comp.fontWeight === "bold" ? fonts.helveticaBold : fonts.helvetica;
+  const fontSize = Number(comp.fontSize) || 12;
+  const text = comp.signatureText || "";
+  const textWidth = font.widthOfTextAtSize(text, fontSize);
+
+  let textX: number;
+  switch (comp.textAlign) {
+    case "center":
+      textX = x + w / 2 - textWidth / 2;
+      break;
+    case "right":
+      textX = x + w - textWidth - 8;
+      break;
+    default: // left
+      textX = x + 8;
+  }
+
+  page.drawText(text, {
+    x: textX,
+    y: lineY - fontSize - 4, // Texto abaixo da linha
+    size: fontSize,
+    font,
+    color: rgbHex(comp.textColor || "#000000"),
   });
 }
 

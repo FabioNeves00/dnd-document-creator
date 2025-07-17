@@ -1,69 +1,117 @@
-import { useState, useCallback, useEffect } from "react";
-import { clamp } from "../utils/helpers";
+import { useState } from "react";
 
-export function useComponentResize(onResize: (w: number, h: number) => void) {
-  const [resizing, setResizing] = useState<null | {
-    startX: number;
-    startY: number;
-    startWidth: number;
-    startHeight: number;
-    direction: string;
-  }>(null);
+interface UseComponentResizeProps {
+  onResize: (width: number, height: number) => void;
+  minWidth?: number;
+  minHeight?: number;
+  maxWidth?: number;
+  maxHeight?: number;
+}
 
-  const handleResizeMouseDown = useCallback(
-    (direction: string, startWidth: number, startHeight: number) =>
-      (e: React.MouseEvent) => {
-        e.stopPropagation();
-        setResizing({
-          startX: e.clientX,
-          startY: e.clientY,
-          startWidth,
-          startHeight,
-          direction,
-        });
-      },
-    []
-  );
+export const useComponentResize = ({
+  onResize,
+  minWidth = 50,
+  minHeight = 20,
+  maxWidth = 800,
+  maxHeight = 600,
+}: UseComponentResizeProps) => {
+  const [isResizing, setIsResizing] = useState(false);
+  const [resizeDirection, setResizeDirection] = useState<string>("");
+  const [startPos, setStartPos] = useState({ x: 0, y: 0 });
+  const [startSize, setStartSize] = useState({ width: 0, height: 0 });
 
-  const handleResizeMouseMove = useCallback(
-    (e: MouseEvent) => {
-      if (!resizing) return;
-      const dx = e.clientX - resizing.startX;
-      const dy = e.clientY - resizing.startY;
-      let newWidth = resizing.startWidth;
-      let newHeight = resizing.startHeight;
-      if (resizing.direction.includes("right")) newWidth += dx;
-      if (resizing.direction.includes("left")) newWidth -= dx;
-      if (resizing.direction.includes("bottom")) newHeight += dy;
-      if (resizing.direction.includes("top")) newHeight -= dy;
-      newWidth = clamp(newWidth, 20, 1000);
-      newHeight = clamp(newHeight, 20, 1000);
-      onResize(Math.round(newWidth), Math.round(newHeight));
-    },
-    [resizing, onResize]
-  );
-
-  const handleResizeMouseUp = useCallback(() => {
-    setResizing(null);
-  }, []);
-
-  // Event listeners globais
-  useEffect(() => {
-    if (resizing) {
-      document.addEventListener("mousemove", handleResizeMouseMove);
-      document.addEventListener("mouseup", handleResizeMouseUp);
-
-      return () => {
-        document.removeEventListener("mousemove", handleResizeMouseMove);
-        document.removeEventListener("mouseup", handleResizeMouseUp);
-      };
+  const getDocumentCursor = (direction: string) => {
+    switch (direction) {
+      case "top-left":
+      case "bottom-right":
+        return "nw-resize";
+      case "top-right":
+      case "bottom-left":
+        return "ne-resize";
+      case "top":
+      case "bottom":
+        return "ns-resize";
+      case "left":
+      case "right":
+        return "ew-resize";
+      default:
+        return "default";
     }
-  }, [resizing, handleResizeMouseMove, handleResizeMouseUp]);
+  };
+
+  const handleResizeStart = (
+    e: React.MouseEvent,
+    direction: string,
+    currentWidth: number,
+    currentHeight: number
+  ) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    setIsResizing(true);
+    setResizeDirection(direction);
+    setStartPos({ x: e.clientX, y: e.clientY });
+    setStartSize({ width: currentWidth, height: currentHeight });
+
+    // Aplicar cursor ao documento durante redimensionamento
+    document.body.style.cursor = getDocumentCursor(direction);
+    document.body.style.userSelect = "none";
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const deltaX = e.clientX - startPos.x;
+      const deltaY = e.clientY - startPos.y;
+
+      let newWidth = startSize.width;
+      let newHeight = startSize.height;
+
+      // Calcular novo tamanho baseado na direção
+      if (direction.includes("right")) {
+        newWidth = Math.max(
+          minWidth,
+          Math.min(maxWidth, startSize.width + deltaX)
+        );
+      }
+      if (direction.includes("left")) {
+        newWidth = Math.max(
+          minWidth,
+          Math.min(maxWidth, startSize.width - deltaX)
+        );
+      }
+      if (direction.includes("bottom")) {
+        newHeight = Math.max(
+          minHeight,
+          Math.min(maxHeight, startSize.height + deltaY)
+        );
+      }
+      if (direction.includes("top")) {
+        newHeight = Math.max(
+          minHeight,
+          Math.min(maxHeight, startSize.height - deltaY)
+        );
+      }
+
+      onResize(Math.round(newWidth), Math.round(newHeight));
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+      setResizeDirection("");
+
+      // Restaurar cursor e seleção do documento
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+  };
 
   return {
-    resizing,
-    handleResizeMouseDown,
-    handleResizeMouseMove,
-    handleResizeMouseUp,
+    isResizing,
+    resizeDirection,
+    handleResizeStart,
   };
-}
+};
